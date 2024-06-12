@@ -15,10 +15,18 @@ print("Model loaded successfully.")
 # Function to classify food vs. non-food image using the loaded model
 def classify_food_vs_nonfood(image):
     try:
+        # Convert image to PIL Image object if it's not already
+        if not isinstance(image, Image.Image):
+            image = Image.fromarray(image)
+
+        # Convert image to RGB mode if it's not already
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        
         # Preprocess image
         image_size = (224, 224)
-        image = image.resize(image_size)
-        image_np = np.array(image) / 255.0
+        image_resized = image.resize(image_size)
+        image_np = np.array(image_resized) / 255.0
         image_np_expanded = np.expand_dims(image_np, axis=0)
 
         # Make prediction
@@ -32,27 +40,32 @@ def classify_food_vs_nonfood(image):
         # Create a draw object
         draw = ImageDraw.Draw(image)
         
-        # Specify font and size
-        font = ImageFont.load_default()
-        
-        # Get text size
-        text_font = ImageFont.truetype("Hack-Regular.ttf", 24)
-        text_bbox = draw.textbbox((0, 0), label, font=text_font)
-        text_size = (text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1])
-        
-        # Calculate text position
-        text_position = ((image_size[0] - text_size[0]) // 2, 10)
+        # Determine label color and font size based on prediction
+        if final_prediction == 0:
+            label_color = (255, 0, 0)  # Red for "Food"
+            text_font = ImageFont.truetype("Hack-Regular.ttf", 24)  # Font size for "Food"
+            text_bbox = draw.textbbox((0, 0), label, font=text_font)
+            text_size = (text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1])
+            text_position = ((image_size[0] - text_size[0]) // 2, 10)
+        else:
+            label_color = (0, 255, 0)  # Green for "Non Food"
+            text_font = ImageFont.truetype("Hack-Regular.ttf", 48)  # Increased font size for "Non Food"
+            text_bbox = draw.textbbox((0, 0), label, font=text_font)
+            text_size = (text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1])
+            text_position = ((image_size[0] - text_size[0]) // 2, (image_size[1] - text_size[1]) // 2)
         
         # Add text to the image
-        draw.text(text_position, label, fill=(255, 0, 0), font=text_font)
+        draw.text(text_position, label, fill=label_color, font=text_font)
 
-        # Return modified image
+        # Return modified image as a PIL Image object
         return image
     except Exception as e:
         print("Error processing image:", e)
+        # Return a blank white image
+        return Image.new("RGB", (224, 224), (255, 255, 255))
 
-# Define inputs for Gradio interface
-image_input = gr.inputs.Image(shape=(224, 224), type="pil")
+# Define input component
+image_input = "image"
 
 # Define example images as file paths
 ex_image_paths = ['image_1.jpeg', 'image_2.jpeg', 'image_3.jpeg', 'image_4.jpg', 'image_5.jpg']
